@@ -1,7 +1,7 @@
-### Docker ###
+## Docker ##
 Pull ticker data from Bitfinex and save it to the InfluxDB time series database.
 
-## Configuration via environment variables ##
+# Configuration via environment variables #
 # Bitfinex API configuration #
 - `BITFINEX_API_KEY` Key to access the Bitfinex API
 - `BITFINEX_API_SECRET` Secret to access the Bitfinex API
