@@ -1,0 +1,2 @@
+websockets==4.0.1
+influxdb==5.0.0
