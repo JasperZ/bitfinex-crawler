@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY apis .
 COPY crawler.py .
 
-CMD ["python", "./crawler.py"]
+CMD ["python", "-u", "crawler.py"]
