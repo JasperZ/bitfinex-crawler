@@ -17,7 +17,7 @@ Pulls ticker data from Bitfinex and saves it to the InfluxDB time series databas
 - `INFLUXDB_PASSWORD` Password used to connect to InfluxDB
 
 ### Links
-[GitHub projectroject](https://github.com/JasperZ/bitfinex-crawler)
+[GitHub project](https://github.com/JasperZ/bitfinex-crawler)
 [Docker Hub](https://hub.docker.com/r/zdock/bitfinex-crawler)
 
 ### License
