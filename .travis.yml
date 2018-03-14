@@ -6,7 +6,7 @@ jobs:
     - stage: build docker image
       script:
       - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-      - docker build -t bitfinex-crawler .
+      - docker build -t bitfinex-crawler ./docker
       - docker images
       - docker tag bitfinex-crawler $DOCKER_USERNAME/bitfinex-crawler
       - docker push $DOCKER_USERNAME/bitfinex-crawler
