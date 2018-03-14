@@ -61,7 +61,7 @@ if __name__ == "__main__":
     tickerSymbols = os.getenv('TICKER_SYMBOLS', None)
 
     if tickerSymbols:
-        tickerSymbols = tickerSymbols.split(",")
+        tickerSymbols = tickerSymbols.replace(" ", "").split(",")
 
     if not (bitfinexAPIKey and bitfinexAPISecret and tickerSymbols):
         print("The non optional environment variables BITFINEX_API_KEY, BITFINEX_API_SECRET and TICKER_SYMBOLS must be set")
