@@ -71,6 +71,8 @@ async def connectInflux(host, port, ssl, verifySsl, username, password, database
 
     print("Connected to InfluxDB")
 
+    return client
+
 
 if __name__ == "__main__":
     bitfinexAPIKey = os.getenv('BITFINEX_API_KEY', None)
