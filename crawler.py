@@ -7,6 +7,7 @@ sys.path.append(lib_path)
 import asyncio
 import websockets
 import json
+import time
 
 import bitfinex
 
@@ -27,9 +28,10 @@ influxTradeTemplate = [
     }
 ]
 
-async def influxSaveTrades(client, queue):
+async def influxSaveTrades(host, port, ssl, verifySsl, username, password, database, queue):
     last_timestamp = ""
     uniq = 0
+    client = None
 
     while True:
         item = await queue.get()
@@ -50,10 +52,25 @@ async def influxSaveTrades(client, queue):
         influxTradeTemplate[0]['fields']['amount'] = amount
         influxTradeTemplate[0]['fields']['price'] = price
 
-        client.write_points(influxTradeTemplate)
+        while not client.write_points(influxTradeTemplate):
+            print("No connection to InfluxDB")
+            client = await connectInflux(host, port, ssl, verifySsl, username, password, database)
 
         last_timestamp = timestamp
-        last_price = price
+
+async def connectInflux(host, port, ssl, verifySsl, username, password, database):
+    print("Connect to InfluxDB")
+
+    client = None
+
+    while not Client:
+        client = InfluxDBClient(host=host, port=port, ssl=ssl, verify_ssl=verifySsl, username=username, password=password)
+        time.sleep(5)
+
+    client.switch_database(database)
+
+    print("Connected to InfluxDB")
+
 
 if __name__ == "__main__":
     bitfinexAPIKey = os.getenv('BITFINEX_API_KEY', None)
@@ -79,13 +96,10 @@ if __name__ == "__main__":
         print("The non optional environment variables INFLUXDB_HOST, INFLUXDB_DATABASE, INFLUXDB_USERNAME and INFLUXDB_PASSWORD must be set")
         exit(1)
 
-    client = InfluxDBClient(host=influxdbHost, port=influxdbPort, ssl=influxdbUseSSL, verify_ssl=influxdbVerifySSL, username=influxdbUsername, password=influxdbPassword)
-    client.switch_database(influxdbDatabase)
-
     eventLoop = asyncio.get_event_loop()
     tradeQueue = queue = asyncio.Queue(loop=eventLoop)
 
     eventLoop.create_task(bitfinex.fetchTradesAndOrders(tickerSymbols, [], tradeQueue, bitfinexAPIKey, bitfinexAPISecret))
-    eventLoop.create_task(influxSaveTrades(client, tradeQueue))
+    eventLoop.create_task(influxSaveTrades(influxdbHost, influxdbPort, influxdbUseSSL, influxdbVerifySSL, influxdbUsername, influxdbPassword, influxdbDatabase, tradeQueue))
 
     eventLoop.run_forever()
