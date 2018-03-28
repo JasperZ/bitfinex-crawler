@@ -150,7 +150,7 @@ async def fetchTrades(websocket, subscribedSymbols, queue):
             try:
                 pong_waiter = await websocket.ping()
                 await asyncio.wait_for(pong_waiter, timeout=1)
-                print('Connection still alive')
+                #print('Connection still alive')
             except:
                 print('Connection not alive')
                 break
