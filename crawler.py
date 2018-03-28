@@ -63,11 +63,15 @@ async def connectInflux(host, port, ssl, verifySsl, username, password, database
 
     client = None
 
-    while not client:
-        client = InfluxDBClient(host=host, port=port, ssl=ssl, verify_ssl=verifySsl, username=username, password=password)
-        time.sleep(5)
+    while True:
+        try:
+            client = InfluxDBClient(host=host, port=port, ssl=ssl, verify_ssl=verifySsl, username=username, password=password)
 
-    client.switch_database(database)
+            client.get_list_database()
+            client.switch_database(database)
+            break
+        except:
+            time.sleep(5)
 
     print("Connected to InfluxDB")
 
