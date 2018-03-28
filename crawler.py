@@ -52,7 +52,7 @@ async def influxSaveTrades(host, port, ssl, verifySsl, username, password, datab
         influxTradeTemplate[0]['fields']['amount'] = amount
         influxTradeTemplate[0]['fields']['price'] = price
 
-        while not client.write_points(influxTradeTemplate):
+        while not client or not client.write_points(influxTradeTemplate):
             print("No connection to InfluxDB")
             client = await connectInflux(host, port, ssl, verifySsl, username, password, database)
 
@@ -63,7 +63,7 @@ async def connectInflux(host, port, ssl, verifySsl, username, password, database
 
     client = None
 
-    while not Client:
+    while not client:
         client = InfluxDBClient(host=host, port=port, ssl=ssl, verify_ssl=verifySsl, username=username, password=password)
         time.sleep(5)
 
