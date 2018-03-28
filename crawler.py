@@ -31,7 +31,8 @@ influxTradeTemplate = [
 async def influxSaveTrades(host, port, ssl, verifySsl, username, password, database, queue):
     last_timestamp = ""
     uniq = 0
-    client = None
+
+    client = await connectInflux(host, port, ssl, verifySsl, username, password, database)
 
     while True:
         item = await queue.get()
@@ -52,9 +53,13 @@ async def influxSaveTrades(host, port, ssl, verifySsl, username, password, datab
         influxTradeTemplate[0]['fields']['amount'] = amount
         influxTradeTemplate[0]['fields']['price'] = price
 
-        while not client or not client.write_points(influxTradeTemplate):
-            print("No connection to InfluxDB")
-            client = await connectInflux(host, port, ssl, verifySsl, username, password, database)
+        while True:
+            try:
+                client.write_points(influxTradeTemplate)
+                break
+            except:
+                print("No connection to InfluxDB")
+                client = await connectInflux(host, port, ssl, verifySsl, username, password, database)
 
         last_timestamp = timestamp
 
