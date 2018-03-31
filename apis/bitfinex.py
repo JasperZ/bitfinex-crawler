@@ -52,17 +52,18 @@ async def connect():
         print('Connection could NOT be established')
         return None
     else:
-        json_response = await websocket.recv()
-        response_dict = json.loads(json_response)
+        try:
+            json_response = await websocket.recv()
+            response_dict = json.loads(json_response)
 
-        # check for correct api version
-        if str(response_dict['version']) == SUPPORTED_API_VERSION:
-            print('Connection successfully established')
-            return websocket
-        else:
+            # check for correct api version
+            if str(response_dict['version']) == SUPPORTED_API_VERSION:
+                print('Connection successfully established')
+                return websocket
+        except:
             print('Connection could NOT be established, API version {} not supported'.format(response_dict['version']))
             return None
-
+            
 async def disconnect(websocket):
     if websocket != None:
         websocket.close()
