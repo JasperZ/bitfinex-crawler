@@ -8,15 +8,6 @@ import hashlib
 SUPPORTED_API_VERSION = '2'
 WEBSOCKET_API_URI = 'wss://api.bitfinex.com/ws/2'
 
-bitfinexAuthenticationRequest = {
-    'event': 'auth',
-    'apiKey': 'api_key',
-    'authSig': 'signature',
-    'authPayload': 'payload',
-    'authNonce': '+authNonce',
-    'calc': 1
-}
-
 bitfinexConfigurationRequest = {
     "event": "conf",
     "flags": "flags"
@@ -28,15 +19,13 @@ bitfinexSubscribeTradeRequest = {
     "symbol": "symbol"
 }
 
-async def fetchTradesAndOrders(tradingSymbols, orderSymbols, tradeQueue, apiKey, apiSecret):
+async def fetchTradesAndOrders(tradingSymbols, orderSymbols, tradeQueue):
     while True:
         websocket = await connect()
 
         if websocket != None:
             if await configure(websocket):
                 tradingSubscriptions = await subscribeToTradingSymbols(websocket, tradingSymbols)
-
-                #await authenticate(websocket, apiKey, apiSecret)
 
                 if len(tradingSubscriptions) == len(tradingSymbols):
                     await fetchTrades(websocket, tradingSubscriptions, tradeQueue)
@@ -63,7 +52,7 @@ async def connect():
         except:
             print('Connection could NOT be established, API version {} not supported'.format(response_dict['version']))
             return None
-            
+
 async def disconnect(websocket):
     if websocket != None:
         websocket.close()
@@ -89,24 +78,6 @@ async def configure(websocket):
     except:
             print('Connection could NOT be configured ')
             return False
-
-async def authenticate(websocket, apiKey, apiSecret):
-    nonce = int(time.time())
-    payload = 'AUTH{}'.format(nonce)
-    sig = hmac.new(apiSecret.encode(), msg=payload.encode(), digestmod='sha384')
-    payloadSign = sig.hexdigest()
-
-    bitfinexAuthenticationRequest['apiKey'] = apiKey
-    bitfinexAuthenticationRequest['authSig'] = payloadSign
-    bitfinexAuthenticationRequest['authPayload'] = payload
-    bitfinexAuthenticationRequest['authNonce'] = nonce
-
-    print(json.dumps(bitfinexAuthenticationRequest))
-
-    await websocket.send(json.dumps(bitfinexAuthenticationRequest))
-    json_response = await websocket.recv()
-
-    print(json_response)
 
 async def subscribeToTradingSymbols(websocket, tradingSymbols):
     tradingSubscriptions = {}

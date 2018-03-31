@@ -84,16 +84,10 @@ async def connectInflux(host, port, ssl, verifySsl, username, password, database
 
 
 if __name__ == "__main__":
-    bitfinexAPIKey = os.getenv('BITFINEX_API_KEY', None)
-    bitfinexAPISecret = os.getenv('BITFINEX_API_SECRET', None)
     tickerSymbols = os.getenv('TICKER_SYMBOLS', None)
 
     if tickerSymbols:
         tickerSymbols = tickerSymbols.replace(" ", "").split(",")
-
-    if not (bitfinexAPIKey and bitfinexAPISecret and tickerSymbols):
-        print("The non optional environment variables BITFINEX_API_KEY, BITFINEX_API_SECRET and TICKER_SYMBOLS must be set")
-        exit(1)
 
     influxdbHost = os.getenv('INFLUXDB_HOST', None)
     influxdbPort = os.getenv('INFLUXDB_PORT', 8086)
@@ -110,7 +104,7 @@ if __name__ == "__main__":
     eventLoop = asyncio.get_event_loop()
     tradeQueue = queue = asyncio.Queue(loop=eventLoop)
 
-    eventLoop.create_task(bitfinex.fetchTradesAndOrders(tickerSymbols, [], tradeQueue, bitfinexAPIKey, bitfinexAPISecret))
+    eventLoop.create_task(bitfinex.fetchTradesAndOrders(tickerSymbols, [], tradeQueue))
     eventLoop.create_task(influxSaveTrades(influxdbHost, influxdbPort, influxdbUseSSL, influxdbVerifySSL, influxdbUsername, influxdbPassword, influxdbDatabase, tradeQueue))
 
     eventLoop.run_forever()

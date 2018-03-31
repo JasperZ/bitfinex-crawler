@@ -5,8 +5,6 @@ Pulls ticker data from Bitfinex and saves it to the InfluxDB time series databas
 
 #### Configuration via environment variables
 ##### Bitfinex API configuration
-- `BITFINEX_API_KEY` Key to access the Bitfinex API
-- `BITFINEX_API_SECRET` Secret to access the Bitfinex API
 - `TICKER_SYMBOLS` Comma seperated list of ticker symbols to track, e.g. `tBTCUSD,tETHUSD`
 
 ##### InfluxDB configuration
