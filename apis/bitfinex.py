@@ -50,7 +50,10 @@ async def connect():
                 print('Connection successfully established')
                 return websocket
         except:
-            print('Connection could NOT be established, API version {} not supported'.format(response_dict['version']))
+            if 'version' in response_dict:
+                print('Connection could NOT be established, API version {} not supported'.format(response_dict['version']))
+            else:
+                print('Connection could NOT be established')
             return None
 
 async def disconnect(websocket):
