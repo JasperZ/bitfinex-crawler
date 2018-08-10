@@ -1,2 +1,2 @@
-websockets==4.0.1
+websockets==6.0
 influxdb==5.0.0
