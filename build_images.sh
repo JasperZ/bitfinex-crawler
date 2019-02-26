@@ -4,7 +4,7 @@ VERSION="0.10.0"
 
 # build image
 cd docker
-docker build -t $DOCKER_USERNAME/bitfinex-crawler:$VERSION .
+docker build -t $DOCKER_USERNAME/bitfinex-crawler:$VERSION -f docker/Dockerfile .
 cd ..
 
 # login to docker hub
