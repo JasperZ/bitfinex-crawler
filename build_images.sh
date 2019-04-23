@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION="0.10.0"
+VERSION="0.10.1"
 
 # build image
 docker build -t $DOCKER_USERNAME/bitfinex-crawler:$VERSION -f docker/Dockerfile .

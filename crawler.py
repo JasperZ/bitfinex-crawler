@@ -38,7 +38,7 @@ async def influxSaveTrades(host, port, ssl, verifySsl, username, password, datab
         item = await queue.get()
 
         symbol = item[0]
-        timestamp = item[1]
+        timestamp = int(item[1])
         amount = item[2]
         price = item[3]
 
