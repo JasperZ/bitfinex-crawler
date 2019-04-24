@@ -55,7 +55,7 @@ async def influxSaveTrades(host, port, ssl, verifySsl, username, password, datab
 
         while True:
             try:
-                client.write_points(influxTradeTemplate)
+                client.write_points(influxTradeTemplate, time_precision='ms')
                 break
             except:
                 print("No connection to InfluxDB")
