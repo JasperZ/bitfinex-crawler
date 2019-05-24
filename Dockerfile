@@ -5,6 +5,6 @@ WORKDIR /usr/src/bitfinex-crawler
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/*.py .
+COPY app .
 
-CMD ["python", "-u", "crawler.py"]
+CMD ["python", "-u", "app/crawler.py"]
