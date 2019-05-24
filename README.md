@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/JasperZ/bitfinex-crawler.svg?branch=master)](https://travis-ci.org/JasperZ/bitfinex-crawler)
-
 ### Docker
 Pulls ticker data from Bitfinex and saves it to the InfluxDB time series database.
 
