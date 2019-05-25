@@ -2,6 +2,7 @@
 
 import logging
 import asyncio
+import functools
 import signal
 import os
 
@@ -12,9 +13,13 @@ from influxdb_backend import InfluxDBBackend
 def setupLogging():
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
+def signal_handler(name, loop, logger):
+    logger.info('Exit Application')
+    eventLoop.stop()
+
 if __name__ == "__main__":
     setupLogging()
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('Main')
 
     tickerSymbols = os.getenv('TICKER_SYMBOLS', None)
 
@@ -29,10 +34,10 @@ if __name__ == "__main__":
     influxDBUsername = os.getenv('INFLUXDB_USERNAME', None)
     influxDBPassword = os.getenv('INFLUXDB_PASSWORD', None)
 
-    if not (influxDBHost and influxDBDatabase and influxDBUsername and influxDBPassword):
-        print("The non optional environment variables INFLUXDB_HOST, \
-            INFLUXDB_DATABASE, INFLUXDB_USERNAME and INFLUXDB_PASSWORD must be set")
-        exit(1)
+    # if not (influxDBHost and influxDBDatabase and influxDBUsername and influxDBPassword):
+    #     print("The non optional environment variables INFLUXDB_HOST, \
+    #         INFLUXDB_DATABASE, INFLUXDB_USERNAME and INFLUXDB_PASSWORD must be set")
+    #     exit(1)
 
     eventLoop = asyncio.get_event_loop()
 
@@ -42,10 +47,16 @@ if __name__ == "__main__":
         influxDBVerifySSL, influxDBUsername, influxDBPassword, influxDBDatabase,
         tradeBuffer)
 
-    # eventLoop.create_task(tradeBuffer.monitor())
-    eventLoop.create_task(bitfinex.fetch())
-    eventLoop.create_task(influxDBBackend.push())
+    for signame in (signal.SIGHUP, signal.SIGUSR1, signal.SIGINT, signal.SIGTERM):
+        eventLoop.add_signal_handler(signame, functools.partial(signal_handler, name=signame, loop=eventLoop, logger=logger))
 
-    eventLoop.run_forever()
+    eventLoop.create_task(tradeBuffer.monitor())
+    eventLoop.create_task(bitfinex.fetch())
+    # eventLoop.create_task(influxDBBackend.push())
+
+    try:
+        eventLoop.run_forever()
+    except:
+        eventLoop.close()
 
     exit(0)
