@@ -165,7 +165,7 @@ class BitfinexClient:
             else:
                 responseDict = json.loads(jsonResponse)
 
-                if responseDict[1] != 'te':
+                if 'te' not in responseDict:
                     continue
 
                 channelId = responseDict[0]
