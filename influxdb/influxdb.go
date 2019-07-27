@@ -196,7 +196,6 @@ func (r InfluxDbRecorder) RecorderTask(trades <-chan bitfinex.Trade, quit <-chan
 					err := r.client.Write(batchPoints)
 
 					if err == nil {
-						log.Printf("Recorder - Wrote %v data points to InfluxDB\n", len(batchPoints.Points()))
 						batchPoints, _ = client.NewBatchPoints(batchConfig)
 					} else {
 						log.Println("Recorder - Error writing points to InfluxDB")
