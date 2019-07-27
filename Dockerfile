@@ -1,10 +1,10 @@
-FROM python:alpine3.7
+FROM golang:1.12.7
 
-WORKDIR /usr/src/bitfinex-crawler
+WORKDIR /go/src/app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
 
-COPY app .
+RUN go get -d -v ./...
+RUN go install -v ./...
 
-CMD ["python", "-u", "crawler.py"]
+CMD ["app"]
