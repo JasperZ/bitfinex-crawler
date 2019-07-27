@@ -18,9 +18,9 @@ func main() {
 	sigint := make(chan os.Signal)
 	quitCrawler := make(chan bool)
 	quitRecorder := make(chan bool)
-	trades := make(chan bitfinex.Trade, 1000)
+	trades := make(chan bitfinex.Trade, 1024)
 	bitfinexConfValid := crawler.ConfigFromEnv()
-	influxdbConfValid := true //recorder.ConfigFromEnv()
+	influxdbConfValid := recorder.ConfigFromEnv()
 
 	if !bitfinexConfValid {
 		fmt.Println("Bitfinex config is not valid!")
@@ -43,15 +43,14 @@ func main() {
 	wg.Add(1)
 	go recorder.RecorderTask(trades, quitRecorder, &wg)
 
-	fmt.Println("Test1")
 	<-sigint
-	fmt.Println("Test2")
-	quitCrawler <- true
-	fmt.Println("Test3")
-	// quitRecorder <- true
-	fmt.Println("Test4")
+	go func() {
+		quitCrawler <- true
+	}()
+	go func() {
+		quitRecorder <- true
+	}()
 
 	wg.Wait()
-
 	os.Exit(0)
 }

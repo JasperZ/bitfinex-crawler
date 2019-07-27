@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -31,6 +32,7 @@ type BitfinexCrawler struct {
 type Trade struct {
 	ID        uint64
 	Timestamp uint64
+	Pair      string
 	Amount    float64
 	Price     float64
 }
@@ -74,14 +76,16 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 		b.ws, _, err = websocket.DefaultDialer.Dial(apiEndpoint, nil)
 
 		if err != nil {
-			log.Fatal("dial:", err)
+			log.Fatal("Crawler - dial:", err)
 		}
 
 		defer b.ws.Close()
 
+		configPhaseEnd := time.After(5 * time.Second)
+
 		// subscribe to symbols
 		for _, sym := range b.config.symbols {
-			if err = b.subscribeSymbol(sym); err != nil {
+			if err = b.subscribeTrade(sym); err != nil {
 				break
 			}
 		}
@@ -90,11 +94,18 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 			continue
 		}
 
-		// main loop
+	mainLoop:
 		for {
 			select {
+			case <-configPhaseEnd:
+				if b.checkFinalConfiguration() {
+					fmt.Println("Crawler - Configuration was successful")
+				} else {
+					fmt.Println("Crawler - Configuration wasn't successful")
+					break mainLoop
+				}
 			case <-quit:
-				fmt.Println("Exit go routine")
+				fmt.Println("Crawler - Exit crawler task")
 				return
 			default:
 				if _, message, err := b.ws.ReadMessage(); err == nil {
@@ -108,18 +119,45 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 				}
 			}
 		}
+
+		b.ws.Close()
+
+		// reset trades subscriptions
+		b.tradesChanIdSymbol = make(map[uint]string)
 	}
 }
 
-func (b BitfinexCrawler) subscribeSymbol(symbol string) error {
+func (b BitfinexCrawler) subscribeTrade(symbol string) error {
 	var request = map[string]string{
 		"event":   "subscribe",
 		"channel": "trades",
 		"symbol":  symbol,
 	}
-	var jsonReq, _ = json.Marshal(request)
 
-	return b.ws.WriteMessage(websocket.TextMessage, jsonReq)
+	return b.ws.WriteJSON(request)
+}
+
+func (b BitfinexCrawler) checkFinalConfiguration() bool {
+	var tradesSymbolToChannel = make(map[string]uint)
+	var tradesOk = true
+
+	for k, v := range b.tradesChanIdSymbol {
+		tradesSymbolToChannel[v] = k
+	}
+
+	for _, v := range b.config.symbols {
+		if _, ok := tradesSymbolToChannel[v]; !ok {
+			fmt.Printf("Crawler - Trade subscription for symbol %v missing\n", v)
+			tradesOk = false
+		}
+	}
+
+	if tradesOk {
+		return true
+	} else {
+		return false
+	}
+
 }
 
 func (b BitfinexCrawler) handleJsonMessage(message []byte) {
@@ -136,7 +174,7 @@ func (b BitfinexCrawler) handleJsonMessage(message []byte) {
 	case "trades":
 		b.handleTradesJsonMessage(message)
 	default:
-		fmt.Printf("No handler - %v\n", string(message))
+		fmt.Printf("Crawler - No handler - %v\n", string(message))
 	}
 }
 
@@ -145,9 +183,9 @@ func (b BitfinexCrawler) handleUpdateMessage(message []byte) {
 	chanIdS := compiledRegex.FindStringSubmatch(string(message))[1]
 	chanId, _ := strconv.ParseUint(chanIdS, 10, 64)
 
-	for k, _ := range b.tradesChanIdSymbol {
+	for k, v := range b.tradesChanIdSymbol {
 		if k == uint(chanId) {
-			b.handleTradesUpdateMessage(message)
+			b.handleTradesUpdateMessage(message, v)
 			break
 		}
 	}
@@ -165,28 +203,28 @@ func (b BitfinexCrawler) handleTradesJsonMessage(message []byte) {
 
 	json.Unmarshal(message, &resp)
 	b.tradesChanIdSymbol[resp.ChanId] = resp.Symbol
-	fmt.Printf("Subscription added - symbol: %v, chanId: %v\n", resp.Symbol, resp.ChanId)
+	fmt.Printf("Crawler - Subscription added - symbol: %v, chanId: %v\n", resp.Symbol, resp.ChanId)
 }
 
-func (b BitfinexCrawler) handleTradesUpdateMessage(message []byte) {
-	compiledRegex := regexp.MustCompile(`\[(\d+),("tu"),\[(\d+),(\d+),(-\d+.\d+|\d+.\d+),(\d+.\d*)\]\]`)
+func (b BitfinexCrawler) handleTradesUpdateMessage(message []byte, symbol string) {
+	compiledRegex := regexp.MustCompile(`\[(\d+),("tu"),\[(\d+),(\d+),(.+),(.+)\]\]`)
 
 	if compiledRegex.Match(message) {
 		submatches := compiledRegex.FindStringSubmatch(string(message))
 
 		id, _ := strconv.ParseUint(submatches[3], 10, 64)
 		timestamp, _ := strconv.ParseUint(submatches[4], 10, 64)
-		amount, _ := strconv.ParseFloat(submatches[3], 64)
-		price, _ := strconv.ParseFloat(submatches[3], 64)
+		amount, _ := strconv.ParseFloat(submatches[5], 64)
+		price, _ := strconv.ParseFloat(submatches[6], 64)
 
 		trade := Trade{
 			ID:        id,
 			Timestamp: timestamp,
+			Pair:      symbol,
 			Amount:    amount,
 			Price:     price,
 		}
 
-		fmt.Println(trade)
 		b.trades <- trade
 	}
 }

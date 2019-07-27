@@ -5,7 +5,9 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/jasperz/bitfinex-crawler/bitfinex"
 )
 
@@ -15,12 +17,13 @@ type config struct {
 	ssl       bool
 	verifySsl bool
 	db        string
-	user      string
+	username  string
 	password  string
 }
 
 type InfluxDbRecorder struct {
 	config *config
+	client client.Client
 }
 
 func NewInfluxDbRecorder() InfluxDbRecorder {
@@ -101,7 +104,7 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 	}
 
 	if val, set := os.LookupEnv("INFLUXDB_USERNAME"); set {
-		r.config.user = val
+		r.config.username = val
 
 		if len(val) == 0 {
 			fmt.Println("INFLUXDB_USERNAME set but empty")
@@ -130,7 +133,95 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 func (r InfluxDbRecorder) RecorderTask(trades <-chan bitfinex.Trade, quit <-chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for {
-		fmt.Printf("Write Trade to db: %v\n", <-trades)
+	var addr string
+	var clientConfig client.HTTPConfig
+	var lastTradeTimestamp, tradeUniq uint64
+
+	if r.config.ssl {
+		addr = fmt.Sprintf("https://%v:%v", r.config.host, r.config.port)
+	} else {
+		addr = fmt.Sprintf("http://%v:%v", r.config.host, r.config.port)
 	}
+
+	clientConfig = client.HTTPConfig{
+		Addr:               addr,
+		InsecureSkipVerify: !r.config.verifySsl,
+		Username:           r.config.username,
+		Password:           r.config.password,
+		Timeout:            5 * time.Second,
+	}
+	batchConfig := client.BatchPointsConfig{
+		Database:  r.config.db,
+		Precision: "ms",
+	}
+
+	// trades related variables
+	lastTradeTimestamp = 0
+	tradeUniq = 0
+
+	// batch points
+	batchPoints, _ := client.NewBatchPoints(batchConfig)
+
+	writeTicker := time.Tick(10 * time.Second)
+
+	var err error
+
+	r.client, err = client.NewHTTPClient(clientConfig)
+
+	if err != nil {
+		fmt.Println("Recorder - Error creating InfluxDB Client: ", err.Error())
+	}
+
+	defer r.client.Close()
+
+	for {
+	mainLoop:
+		for {
+			select {
+			case <-quit:
+				fmt.Println("Recorder - Exit recorder task")
+				return
+			case trade := <-trades:
+				if lastTradeTimestamp == trade.Timestamp {
+					tradeUniq++
+				} else {
+					tradeUniq = 0
+				}
+
+				lastTradeTimestamp = trade.Timestamp
+				batchPoints.AddPoint(r.createTradePoint(trade, tradeUniq))
+			case <-writeTicker:
+				if len(batchPoints.Points()) > 0 {
+					err := r.client.Write(batchPoints)
+
+					if err == nil {
+						fmt.Printf("Recorder - Wrote %v data points to InfluxDB\n", len(batchPoints.Points()))
+						batchPoints, _ = client.NewBatchPoints(batchConfig)
+					} else {
+						fmt.Println("Recorder - Error writing points to InfluxDB")
+						fmt.Printf("Recorder - %v unwritten data points\n", len(batchPoints.Points()))
+						break mainLoop
+					}
+				}
+			}
+		}
+
+		fmt.Println("Recorder - Lost connection to InfluxDB")
+	}
+}
+
+func (r InfluxDbRecorder) createTradePoint(trade bitfinex.Trade, uniq uint64) *client.Point {
+	measurement := "trades"
+	tags := map[string]string{
+		"pair": trade.Pair,
+		"uniq": strconv.FormatUint(uniq, 10),
+	}
+	fields := map[string]interface{}{
+		"amount": trade.Amount,
+		"price":  trade.Price,
+	}
+	timestamp := time.Unix(0, int64(trade.Timestamp)*int64(time.Millisecond))
+	point, _ := client.NewPoint(measurement, tags, fields, timestamp)
+
+	return point
 }
