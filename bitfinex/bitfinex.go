@@ -3,7 +3,6 @@ package bitfinex
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -76,7 +75,11 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 		b.ws, _, err = websocket.DefaultDialer.Dial(apiEndpoint, nil)
 
 		if err != nil {
-			log.Fatal("Crawler - dial:", err)
+			fmt.Println("Crawler - Couldn't establish Connection, reconnect in 10 seconds")
+			time.Sleep(10 * time.Second)
+			continue
+		} else {
+			fmt.Println("Crawler - Connection established")
 		}
 
 		defer b.ws.Close()
@@ -116,10 +119,14 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 					if compiledUpdateMsgRegex.Match(message) {
 						b.handleUpdateMessage(message)
 					}
+				} else {
+					fmt.Println("Crawler - Error receiving:", err)
+					break mainLoop
 				}
 			}
 		}
 
+		fmt.Println("Crawler - Connection closed")
 		b.ws.Close()
 
 		// reset trades subscriptions
