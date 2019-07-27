@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,11 +23,11 @@ func main() {
 	influxdbConfValid := recorder.ConfigFromEnv()
 
 	if !bitfinexConfValid {
-		fmt.Println("Bitfinex config is not valid!")
+		log.Println("Main -", "Bitfinex config is not valid!")
 	}
 
 	if !influxdbConfValid {
-		fmt.Println("InfluxDB config is not valid!")
+		log.Println("Main -", "InfluxDB config is not valid!")
 	}
 
 	if !(bitfinexConfValid && influxdbConfValid) {

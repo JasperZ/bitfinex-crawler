@@ -2,7 +2,7 @@ package bitfinex
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -54,7 +54,7 @@ func (b BitfinexCrawler) ConfigFromEnv() bool {
 		// TODO: make sure every symbol is in the list once
 		b.config.symbols = strings.Split(valTrimmed, ",")
 	} else {
-		fmt.Println("TICKER_SYMBOLS not set, please set")
+		log.Println("Crawler - TICKER_SYMBOLS not set, please set")
 		valid = false
 	}
 
@@ -75,11 +75,11 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 		b.ws, _, err = websocket.DefaultDialer.Dial(apiEndpoint, nil)
 
 		if err != nil {
-			fmt.Println("Crawler - Couldn't establish Connection, reconnect in 10 seconds")
+			log.Println("Crawler - Couldn't establish Connection, reconnect in 10 seconds")
 			time.Sleep(10 * time.Second)
 			continue
 		} else {
-			fmt.Println("Crawler - Connection established")
+			log.Println("Crawler - Connection established")
 		}
 
 		defer b.ws.Close()
@@ -102,13 +102,13 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 			select {
 			case <-configPhaseEnd:
 				if b.checkFinalConfiguration() {
-					fmt.Println("Crawler - Configuration was successful")
+					log.Println("Crawler - Configuration was successful")
 				} else {
-					fmt.Println("Crawler - Configuration wasn't successful")
+					log.Println("Crawler - Configuration wasn't successful")
 					break mainLoop
 				}
 			case <-quit:
-				fmt.Println("Crawler - Exit crawler task")
+				log.Println("Crawler - Exit crawler task")
 				return
 			default:
 				if _, message, err := b.ws.ReadMessage(); err == nil {
@@ -120,13 +120,13 @@ func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *
 						b.handleUpdateMessage(message)
 					}
 				} else {
-					fmt.Println("Crawler - Error receiving:", err)
+					log.Println("Crawler - Error receiving:", err)
 					break mainLoop
 				}
 			}
 		}
 
-		fmt.Println("Crawler - Connection closed")
+		log.Println("Crawler - Connection closed")
 		b.ws.Close()
 
 		// reset trades subscriptions
@@ -154,7 +154,7 @@ func (b BitfinexCrawler) checkFinalConfiguration() bool {
 
 	for _, v := range b.config.symbols {
 		if _, ok := tradesSymbolToChannel[v]; !ok {
-			fmt.Printf("Crawler - Trade subscription for symbol %v missing\n", v)
+			log.Printf("Crawler - Trade subscription for symbol %v missing\n", v)
 			tradesOk = false
 		}
 	}
@@ -181,7 +181,7 @@ func (b BitfinexCrawler) handleJsonMessage(message []byte) {
 	case "trades":
 		b.handleTradesJsonMessage(message)
 	default:
-		fmt.Printf("Crawler - No handler - %v\n", string(message))
+		log.Printf("Crawler - No handler - %v\n", string(message))
 	}
 }
 
@@ -210,7 +210,7 @@ func (b BitfinexCrawler) handleTradesJsonMessage(message []byte) {
 
 	json.Unmarshal(message, &resp)
 	b.tradesChanIdSymbol[resp.ChanId] = resp.Symbol
-	fmt.Printf("Crawler - Subscription added - symbol: %v, chanId: %v\n", resp.Symbol, resp.ChanId)
+	log.Printf("Crawler - Subscribed to trades channel for %v\n", resp.Symbol)
 }
 
 func (b BitfinexCrawler) handleTradesUpdateMessage(message []byte, symbol string) {

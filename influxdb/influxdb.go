@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -41,11 +42,11 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.host = val
 
 		if len(val) == 0 {
-			fmt.Println("INFLUXDB_HOST set but empty")
+			log.Printf("Recorder - INFLUXDB_HOST set but empty")
 			valid = false
 		}
 	} else {
-		fmt.Println("INFLUXDB_HOST not set, please set")
+		log.Printf("Recorder - INFLUXDB_HOST not set, please set")
 		valid = false
 	}
 
@@ -54,12 +55,12 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.port, err = strconv.ParseUint(val, 10, 0)
 
 		if err != nil {
-			fmt.Printf("INFLUXDB_PORT parse error: \"%v\"\n", err)
-			fmt.Println("Use default: 8086")
+			log.Printf("Recorder - INFLUXDB_PORT parse error: \"%v\"\n", err)
+			log.Printf("Recorder - Use default: 8086")
 			r.config.port = 8086
 		}
 	} else {
-		fmt.Println("INFLUXDB_PORT not set, use default: 8086")
+		log.Printf("Recorder - INFLUXDB_PORT not set, use default: 8086")
 		r.config.port = 8086
 	}
 
@@ -68,12 +69,12 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.ssl, err = strconv.ParseBool(val)
 
 		if err != nil {
-			fmt.Printf("INFLUXDB_USE_SSL parse error: \"%v\"\n", err)
-			fmt.Println("Use default: false")
+			log.Printf("Recorder - INFLUXDB_USE_SSL parse error: \"%v\"\n", err)
+			log.Printf("Recorder - Use default: false")
 			r.config.ssl = false
 		}
 	} else {
-		fmt.Println("INFLUXDB_USE_SSL not set, use default: false")
+		log.Printf("Recorder - INFLUXDB_USE_SSL not set, use default: false")
 		r.config.ssl = false
 	}
 
@@ -82,12 +83,12 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.verifySsl, err = strconv.ParseBool(val)
 
 		if err != nil {
-			fmt.Printf("INFLUXDB_VERIFY_SSL parse error: \"%v\"\n", err)
-			fmt.Println("Use default: false")
+			log.Printf("Recorder - INFLUXDB_VERIFY_SSL parse error: \"%v\"\n", err)
+			log.Printf("Recorder - Use default: false")
 			r.config.verifySsl = false
 		}
 	} else {
-		fmt.Println("INFLUXDB_VERIFY_SSL not set, use default: false")
+		log.Printf("Recorder - INFLUXDB_VERIFY_SSL not set, use default: false")
 		r.config.verifySsl = false
 	}
 
@@ -95,11 +96,11 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.db = val
 
 		if len(val) == 0 {
-			fmt.Println("INFLUXDB_DATABASE set but empty")
+			log.Printf("Recorder - INFLUXDB_DATABASE set but empty")
 			valid = false
 		}
 	} else {
-		fmt.Println("INFLUXDB_DATABASE not set, please set")
+		log.Printf("Recorder - INFLUXDB_DATABASE not set, please set")
 		valid = false
 	}
 
@@ -107,11 +108,11 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.username = val
 
 		if len(val) == 0 {
-			fmt.Println("INFLUXDB_USERNAME set but empty")
+			log.Printf("Recorder - INFLUXDB_USERNAME set but empty")
 			valid = false
 		}
 	} else {
-		fmt.Println("INFLUXDB_USERNAME not set, please set")
+		log.Printf("Recorder - INFLUXDB_USERNAME not set, please set")
 		valid = false
 	}
 
@@ -119,11 +120,11 @@ func (r InfluxDbRecorder) ConfigFromEnv() bool {
 		r.config.password = val
 
 		if len(val) == 0 {
-			fmt.Println("INFLUXDB_PASSWORD set but empty")
+			log.Printf("Recorder - INFLUXDB_PASSWORD set but empty")
 			valid = false
 		}
 	} else {
-		fmt.Println("INFLUXDB_PASSWORD not set, please set")
+		log.Printf("Recorder - INFLUXDB_PASSWORD not set, please set")
 		valid = false
 	}
 
@@ -169,7 +170,7 @@ func (r InfluxDbRecorder) RecorderTask(trades <-chan bitfinex.Trade, quit <-chan
 	r.client, err = client.NewHTTPClient(clientConfig)
 
 	if err != nil {
-		fmt.Println("Recorder - Error creating InfluxDB Client: ", err.Error())
+		log.Println("Recorder - Error creating InfluxDB Client: ", err.Error())
 	}
 
 	defer r.client.Close()
@@ -179,7 +180,7 @@ func (r InfluxDbRecorder) RecorderTask(trades <-chan bitfinex.Trade, quit <-chan
 		for {
 			select {
 			case <-quit:
-				fmt.Println("Recorder - Exit recorder task")
+				log.Println("Recorder - Exit recorder task")
 				return
 			case trade := <-trades:
 				if lastTradeTimestamp == trade.Timestamp {
@@ -195,18 +196,18 @@ func (r InfluxDbRecorder) RecorderTask(trades <-chan bitfinex.Trade, quit <-chan
 					err := r.client.Write(batchPoints)
 
 					if err == nil {
-						fmt.Printf("Recorder - Wrote %v data points to InfluxDB\n", len(batchPoints.Points()))
+						log.Printf("Recorder - Wrote %v data points to InfluxDB\n", len(batchPoints.Points()))
 						batchPoints, _ = client.NewBatchPoints(batchConfig)
 					} else {
-						fmt.Println("Recorder - Error writing points to InfluxDB")
-						fmt.Printf("Recorder - %v unwritten data points\n", len(batchPoints.Points()))
+						log.Println("Recorder - Error writing points to InfluxDB")
+						log.Printf("Recorder - %v unwritten data points\n", len(batchPoints.Points()))
 						break mainLoop
 					}
 				}
 			}
 		}
 
-		fmt.Println("Recorder - Lost connection to InfluxDB")
+		log.Println("Recorder - Lost connection to InfluxDB")
 	}
 }
 
