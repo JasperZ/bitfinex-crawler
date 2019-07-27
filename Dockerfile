@@ -1,10 +1,7 @@
 FROM golang:1.12.7
 
-WORKDIR /go/src/app
+ADD . /go/src/github.com/jasperz/bitfinex-crawler
 
-COPY . .
+RUN go install github.com/jasperz/bitfinex-crawler
 
-RUN go get -d -v ./...
-RUN go install -v ./...
-
-CMD ["app"]
+ENTRYPOINT /go/bin/bitfinex-crawler
