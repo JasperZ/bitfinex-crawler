@@ -8,37 +8,40 @@ import (
 	"syscall"
 
 	"github.com/jasperz/bitfinex-crawler/bitfinex"
+	"github.com/jasperz/bitfinex-crawler/influxdb"
 )
 
 func main() {
 	var wg sync.WaitGroup
 	crawler := bitfinex.NewBitfinexCrawler()
-	influxdbConfValid := true //crawler.ConfigFromEnv()
-	// influxdbConf, influxdbConfValid := influxdb.ConfigFromEnv()
+	recorder := influxdb.NewInfluxDbRecorder()
 	sigint := make(chan os.Signal)
 	quitCrawler := make(chan bool)
-	// quitRecorder := make(chan bool)
+	quitRecorder := make(chan bool)
+	trades := make(chan bitfinex.Trade, 1000)
 	bitfinexConfValid := crawler.ConfigFromEnv()
+	influxdbConfValid := true //recorder.ConfigFromEnv()
 
 	if !bitfinexConfValid {
 		fmt.Println("Bitfinex config is not valid!")
 	}
 
-	// if !influxdbConfValid {
-	// 	fmt.Println("InfluxDB config is not valid!")
-	// }
+	if !influxdbConfValid {
+		fmt.Println("InfluxDB config is not valid!")
+	}
 
 	if !(bitfinexConfValid && influxdbConfValid) {
 		os.Exit(1)
+
 	}
 
 	signal.Notify(sigint, os.Interrupt)
 	signal.Notify(sigint, syscall.SIGTERM)
 
 	wg.Add(1)
-	go crawler.CrawlerTask(quitCrawler, &wg)
-	// wg.Add(1)
-	// go influxdb.RecorderTask(influxdbConf, quitRecorder, &wg)
+	go crawler.CrawlerTask(trades, quitCrawler, &wg)
+	wg.Add(1)
+	go recorder.RecorderTask(trades, quitRecorder, &wg)
 
 	fmt.Println("Test1")
 	<-sigint

@@ -25,6 +25,7 @@ type BitfinexCrawler struct {
 	config             *config
 	ws                 *websocket.Conn
 	tradesChanIdSymbol map[uint]string
+	trades             chan<- Trade
 }
 
 type Trade struct {
@@ -59,11 +60,13 @@ func (b BitfinexCrawler) ConfigFromEnv() bool {
 	return valid
 }
 
-func (b BitfinexCrawler) CrawlerTask(quit <-chan bool, wg *sync.WaitGroup) {
+func (b BitfinexCrawler) CrawlerTask(trades chan<- Trade, quit <-chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	compiledJsonMsgRegex := regexp.MustCompile(jsonMsgRegex)
 	compiledUpdateMsgRegex := regexp.MustCompile(updateMsgRegex)
+
+	b.trades = trades
 
 	for {
 		var err error
@@ -184,5 +187,6 @@ func (b BitfinexCrawler) handleTradesUpdateMessage(message []byte) {
 		}
 
 		fmt.Println(trade)
+		b.trades <- trade
 	}
 }
