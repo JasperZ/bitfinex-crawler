@@ -1,4 +1,4 @@
-FROM golang:1.12.7
+FROM golang:1.12.7-alpine
 
 ADD . /go/src/github.com/jasperz/bitfinex-crawler
 
