@@ -210,7 +210,7 @@ func (b BitfinexCrawler) handleTradesJsonMessage(message []byte) {
 
 	json.Unmarshal(message, &resp)
 	b.tradesChanIdSymbol[resp.ChanId] = resp.Symbol
-	log.Printf("Crawler - Subscribed to trades channel for %v\n", resp.Symbol)
+	log.Printf("Crawler - Subscribed to trades channel of %v\n", resp.Symbol)
 }
 
 func (b BitfinexCrawler) handleTradesUpdateMessage(message []byte, symbol string) {
