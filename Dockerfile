@@ -15,5 +15,4 @@ RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /go/bin/bitfinex-crawle
 FROM alpine:3.10
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /go/bin/bitfinex-crawler /go/bin/bitfinex-crawler
-RUN /go/bin/bitfinex-crawler
 ENTRYPOINT ["/go/bin/bitfinex-crawler"]
